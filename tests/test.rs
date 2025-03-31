@@ -355,7 +355,6 @@ fn gnu_shared() {
 }
 
 #[test]
-#[cfg(target_os = "linux")]
 fn gnu_link_shared() {
     use std::process::Command;
 
@@ -368,11 +367,15 @@ fn gnu_link_shared() {
 
     reset_env();
     let test = Test::gnu();
+    let output = "output_shared_lib";
     let root_dir = env!("CARGO_MANIFEST_DIR");
+    #[cfg(windows)]
+    let src = format!("{root_dir}/dev-tools/cc-test/src/msvc_shared.c");
+    #[cfg(not(windows))]
     let src = format!("{root_dir}/dev-tools/cc-test/src/foo.c");
 
-    cc::Build::new()
-        .host(target)
+    let mut cc = cc::Build::new();
+    cc.host(target)
         .target(target)
         .opt_level(2)
         .out_dir(test.td.path())
@@ -380,9 +383,9 @@ fn gnu_link_shared() {
         .shared_flag(true)
         .static_flag(false)
         .link_shared_flag(true)
-        .compile("foo");
-
-    assert!(test.td.path().join("libfoo.so").exists());
+        .compile(output);
+    let dynlib_name = cc.get_canonical_library_names(output).unwrap().2;
+    assert!(test.td.path().join(dynlib_name).exists());
 }
 
 #[test]
